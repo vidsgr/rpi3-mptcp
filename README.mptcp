@@ -1,0 +1,31 @@
+wget https://github.com/raspberrypi/linux/archive/raspberrypi-kernel_1.20171029-1.tar.gz
+tar xvf raspberrypi-kernel_1.20171029-1.tar.gz 
+wget http://multipath-tcp.org/patches/mptcp-v4.9-c88d1d56809e.patch
+cd linux-raspberrypi-kernel_1.20171029-1
+patch  -p1 <../mptcp-v4.9-c88d1d56809e.patch
+
+This patch will fail:
+
+net/core/sock.c.rej ===> include MPTCP header
+net/ipv4/tcp_output.c ===> One function needs to modify static to non-static. But let it return int
+
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- bcm2709_defconfig
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- menuconfig
+
+===> select MPTCP
+
+make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- zImage modules dtbs -j 6
+mkdir mnt
+mkdir mnt/fat32
+mkdir mnt/ext4
+sudo mount /dev/sdb1 mnt/fat32
+sudo mount /dev/sdb2 mnt/ext4
+sudo make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- INSTALL_MOD_PATH=mnt/ext4 modules_install
+sudo cp mnt/fat32/$KERNEL.img mnt/fat32/$KERNEL-backup.img
+sudo cp arch/arm/boot/zImage mnt/fat32/$KERNEL.img
+sudo cp arch/arm/boot/dts/*.dtb mnt/fat32/
+sudo cp arch/arm/boot/dts/overlays/*.dtb* mnt/fat32/overlays/
+sudo cp arch/arm/boot/dts/overlays/README mnt/fat32/overlays/
+sudo umount mnt/fat32
+sudo umount mnt/ext4
+
